@@ -1,8 +1,6 @@
 # Flask Auth Tutorial
 
-So you want a basic example? I made a quick tutorial.
-
-Please don't just copy and paste this, actually follow through and understand each step.
+So you want a basic example? I made a quick tutorial. Please don't just copy and paste this, actually follow through and understand each step.
 
 A basic authentication platform has four pieces:
 
@@ -158,7 +156,9 @@ This lets a user create a new account, stores their username and password, and l
     
         return redirect(url_for('index'))
 
-This will log in a user if their user exists, first, and then if their password matches. There's still some room for improvement, since we're storing plaintext passwords. it wouldn't be hard to secure it with [`hashlib`](https://docs.python.org/2/library/hashlib.html) but we're keeping it extremely simple.
+This will log in a user if their user exists, first, and then if their password matches. There's still some room for improvement, since we're storing plaintext passwords. You should never store your passwords as plaintext. It wouldn't be hard to secure it with [`scrypt`](https://pypi.python.org/pypi/scrypt/) but we're keeping it extremely simple.
+
+#Never store passwords in plaintext. Always hash and salt them. This is entirely proof of concept.
 
 We still need our secret page, and that requires an extra step. We need to make sure the user is actually authenticated before rendering the secret template, and there's a few ways to do this. We can put everything inside an if statement in the method that checks the existence of our user in the session object, or what we will do, is make a decorator using [`functools.wraps`](https://docs.python.org/2/library/functools.html#functools.wraps) to do all that for us! in `app.py`:
 

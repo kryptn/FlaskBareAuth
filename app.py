@@ -1,5 +1,3 @@
-
-from contextlib import contextmanager
 from functools import wraps
 
 from flask import Flask, session, redirect, url_for, render_template, request, flash
@@ -11,6 +9,11 @@ db = SQLAlchemy(app)
 app.secret_key = "This is supposed to be a secret"
 
 class User(db.Model):
+    """ 
+    User database model
+
+    """
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True)
     password = db.Column(db.String(256))
@@ -23,6 +26,10 @@ class User(db.Model):
         return '<User %r>' % self.username
 
 def authenticated(f):
+    """
+    Decorator to enforce authentication on routed methods
+
+    """
     @wraps(f)
     def wrapper(*args, **kwargs):
         if 'username' in session:
@@ -34,11 +41,18 @@ def authenticated(f):
 
 @app.route('/')
 def index():
-
     return render_template('index.html')
 
 @app.route('/register', methods=['GET','POST'])
 def register():
+    """
+    Checks database to verify user doesn't exist,
+    then creates and logs on new user
+
+    Any error is flashed
+
+    """
+
     if request.method == 'POST':
         result = User.query.filter_by(username=request.form['username']).first()
         if result is None:
@@ -54,6 +68,12 @@ def register():
 
 @app.route('/login', methods=['GET','POST'])
 def login():
+    """
+    Verifies user exists and compares password
+
+    Any error is flashed
+    """
+
     if request.method == 'POST':
         result = User.query.filter_by(username=request.form['username']).first()
         if result and request.form['password'] == result.password:
@@ -65,6 +85,11 @@ def login():
 
 @app.route('/logout')
 def logout():
+    """
+    Destroys any active session
+
+    """
+    
     session.pop('username', None)
     flash('Logged out')
     return redirect(url_for('index'))
@@ -72,6 +97,11 @@ def logout():
 @app.route('/secret')
 @authenticated
 def secret():
+    """
+    Authenticated only route
+
+    @authenticated will flash a message if not authed
+    """
     return render_template('secret.html')
 
 if __name__ == "__main__":

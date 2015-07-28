@@ -9,7 +9,9 @@ A basic authentication platform has four pieces:
 * Maintain user session
 * Let users log out
 
-We can break it down pretty simply. First, we're going to use [`flask`](http://flask.pocoo.org/) and [`flask-sqlalchemy`](https://pythonhosted.org/Flask-SQLAlchemy/index.html) so get those installed with pip
+We can break it down pretty simply. First, we're going to use [`flask`](http://flask.pocoo.org/) and [`flask-sqlalchemy`](https://pythonhosted.org/Flask-SQLAlchemy/index.html), and then we'll use [`bcrypt`](https://pypi.python.org/pypi/bcrypt/1.1.0) to store the passwords, so get those installed with pip:
+
+    pip install flask flask-sqlalchemy bcrypt
 
 First step for this new flask app (save as `app.py`):
 ```python
@@ -153,9 +155,39 @@ def login():
 
     return redirect(url_for('index'))
 ```
-This will log in a user if their user exists, first, and then if their password matches. There's still some room for improvement, since we're storing plaintext passwords. You should never store your passwords as plaintext. It wouldn't be hard to secure it with [`scrypt`](https://pypi.python.org/pypi/scrypt/) but we're keeping it extremely simple.
+This will log in a user if their user exists, first, and then if their password matches. There's still some room for improvement, since we're storing plaintext passwords. You should never store your passwords as plaintext, so we'll fix this.
 
-#Never store passwords in plaintext. Always hash and salt them. This is entirely proof of concept.
+Throw `include bcrypt` at the top of your app.py file, and let's modify our User model by adding a couple utilities. We'll add a hash method that encrypts the password, and a verify method that'll check the password for us and just tell us true or false, if it matches.
+
+```python
+@staticmethod
+def hash(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+def verify(self, password):
+    if bcrypt.hashpw(password.encode('utf-8'), self.password.encode('utf-8')) == self.password:
+        return True
+    return False
+```
+
+And then we need to change how we actually store the password. We've got the hash method, but it's not actually used. So in the `__init__` method for our `User` class let's change one line:
+
+```python
+self.password = self.hash(password)
+```
+
+And in our `login` route we'll need to change how we check the password:
+
+```python
+# from
+if request.method == 'POST':
+    result = User.query.filter_by(username=request.form['username']).first()
+    if result and request.form['password'] == result.password:
+# to
+if request.method == 'POST':
+    result = User.query.filter_by(username=request.form['username']).first()
+    if result and result.verify(request.form['username']):
+```
 
 We still need our secret page, and that requires an extra step. We need to make sure the user is actually authenticated before rendering the secret template, and there's a few ways to do this. We can put everything inside an if statement in the method that checks the existence of our user in the session object, or what we will do, is make a decorator using [`functools.wraps`](https://docs.python.org/2/library/functools.html#functools.wraps) to do all that for us! in `app.py`:
 ```python

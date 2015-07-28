@@ -2,6 +2,7 @@ from functools import wraps
 
 from flask import Flask, session, redirect, url_for, render_template, request, flash
 from flask.ext.sqlalchemy import SQLAlchemy
+import bcrypt
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///auth.db'
@@ -20,7 +21,16 @@ class User(db.Model):
 
     def __init__(self, username, password):
         self.username = username
-        self.password = password
+        self.password = self.hash(password)
+
+    @staticmethod
+    def hash(password):
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+    def verify(self, password):
+        if bcrypt.hashpw(password.encode('utf-8'), self.password.encode('utf-8')) == self.password:
+            return True
+        return False
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -76,7 +86,7 @@ def login():
 
     if request.method == 'POST':
         result = User.query.filter_by(username=request.form['username']).first()
-        if result and request.form['password'] == result.password:
+        if result and result.verify(request.form['password']):
             session['username'] = result.username
         else:
             flash('wrong user or password')
